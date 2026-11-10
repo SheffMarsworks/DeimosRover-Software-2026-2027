@@ -1,0 +1,12 @@
+camera_feed:
+  ros__parameters:
+    device_index: 0
+    source: ""
+    width: 640
+    height: 480
+    fps: 15
+    topic: /camera/image_raw
+    frame_id: camera_link
+    retry_period_s: 2
+    reliable: true
+    fourcc: "MJPG"
