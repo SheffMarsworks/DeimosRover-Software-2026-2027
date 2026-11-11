@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 import rclpy
@@ -6,6 +7,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from sensor_msgs.msg import Image
+from ament_index_python.packages import get_package_share_directory
 
 
 class CameraFeed(Node):
@@ -22,7 +24,9 @@ class CameraFeed(Node):
         self.declare_parameter('topic', '/camera/image_raw')
         self.declare_parameter('frame_id', 'camera_link')
         self.declare_parameter('retry_period_s', 2)
-        self.declare_parameter('fallback_image', '')
+        default_image = os.path.join(
+            get_package_share_directory('rover_camera'), 'assets', 'fallback.jpg')
+        self.declare_parameter('fallback_image', default_image)
         self.declare_parameter('reliable', True)
         self.declare_parameter('fourcc', 'MJPG')
 
@@ -81,29 +85,9 @@ class CameraFeed(Node):
         img = cv2.imread(path) if path else None
         if img is None:
             if path:
-                self.get_logger().warning(f"Could not read '{path}', using generated image.")
-            img = self.generated_fallback()
+                self.get_logger().warning(f"Could not read '{path}', using a plain grey frame.")
+            img = np.full((self.height, self.width, 3), 40, dtype=np.uint8)
         return cv2.resize(img, (self.width, self.height))
-
-    def generated_fallback(self):
-        h, w = self.height, self.width
-        img = np.full((h, w, 3), 40, dtype=np.uint8)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        s = w / 640.0
-        yellow = (0, 200, 255)
-        cv2.putText(img, 'NO CAMERA DETECTED', (int(60 * s), int(60 * s)),
-                    font, 1.1 * s, (255, 255, 255), 2)
-        cx, cy, r = w // 2, int(h * 0.5), int(h * 0.22)
-        cv2.circle(img, (cx, cy), r, yellow, 3)
-        for dx in (-r // 2, r // 2):
-            cv2.line(img, (cx + dx - r // 5, cy - r // 4),
-                     (cx + dx + r // 5, cy - r // 4), yellow, 3)
-        cv2.ellipse(img, (cx, cy + r // 3), (r // 3, r // 5), 0, 0, 180, yellow, 3)
-        cv2.putText(img, 'the rover is staring at the inside',
-                    (int(40 * s), int(h - 60 * s)), font, 0.6 * s, (200, 200, 200), 1)
-        cv2.putText(img, 'of its own eyelids',
-                    (int(40 * s), int(h - 30 * s)), font, 0.6 * s, (200, 200, 200), 1)
-        return img
 
     def publish_frame(self, frame):
         msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
