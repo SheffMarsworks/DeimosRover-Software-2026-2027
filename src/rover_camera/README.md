@@ -36,6 +36,18 @@ Examples:
 The last example uses a camera number that does not exist, so it publishes the
 placeholder.
 
+To Check if camera works when plugged in/out and reconnects automatically for WSL
+    Windows Terminal: usbipd attach --wsl Ubuntu-22.04 --busid 1-1
+    Ubuntu Terminal tab1: ros2 run rover_camera camera_feed --ros-args -p width:=320 -p height:=240 --log-level camera_feed:=debug 2>&1 | grep --line-buffered -v "Corrupt JPEG"
+    Ubuntu Terminal tab2: ros2 topic hz /camera/image_raw
+    Ubuntu Terminal tab3: watch -n 1 'ls -l /dev/video* 2>&1'
+    Ubuntu Terminal tab4: ros2 run rqt_image_view rqt_image_view /camera/image_raw
+    Windows Terminal: usbipd detach --busid 1-1
+    Windows Terminal: usbipd attach --wsl Ubuntu-22.04 --busid 1-1
+
+This should automatically pick up camera feed after reconnecting
+
+
 Check output:
     ros2 topic hz /camera/image_raw
     ros2 topic echo --once /camera/image_raw --field width
